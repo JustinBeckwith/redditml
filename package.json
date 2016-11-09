@@ -1,0 +1,17 @@
+{
+  "name": "redditml",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Justin Beckwith <justin.beckwith@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@google-cloud/bigquery": "^0.4.0",
+    "async": "^2.1.2",
+    "request": "^2.78.0"
+  }
+}
