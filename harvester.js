@@ -3,19 +3,14 @@ const util = require('util');
 const async = require('async');
 const fs = require('fs');
 
-var subreddit = process.argv[2];
-var subredditUrl = `https://www.reddit.com/r/${subreddit}`;
-
-console.log(`Processing /r/${subreddit}`);
-
-function _getPosts(callback) {
+function _getPosts(subredditUrl, callback) {
   console.log("Request data from reddit...");
   let allPosts = [];
   let pagesToFetch = 4;
   let fetchFns = Array(pagesToFetch);
   let fetchFn = (after, callback) => {
     console.log("Loading page: " + after);
-    _populatePageUrls(after, allPosts, (err, after) => {
+    _populatePageUrls(subredditUrl, after, allPosts, (err, after) => {
       if (err) { 
         console.error("Error getting page urls from reddit post: " + util.inspect(err));
         return callback(err);
@@ -36,7 +31,7 @@ function _getPosts(callback) {
   });
 }
 
-function _populatePageUrls(after, allPosts, callback) {
+function _populatePageUrls(subredditUrl, after, allPosts, callback) {
   console.log('populating page urls...');
   _getRedditData(subredditUrl + '/hot.json', after, (err, page) => {
             
@@ -79,7 +74,7 @@ function _getRedditData(url, after, callback) {
   });
 }
 
-function _getComments(posts, callback) {
+function _getComments(subredditUrl, posts, callback) {
   let comments = [];
   let counter = 0;
   for (var i=0; i<posts.length; i++) {
@@ -123,22 +118,42 @@ function _populateComments(comments, items) {
   }
 }
 
-_getPosts((err, results) => {
-  if (err) {
-    console.log(err);
-  } else {
-    console.log(`Loading comments from ${results.length} posts ...`);
-    _getComments(results, (err, comments) => {
+function getComments(subreddit) {
+  return new Promise((resolve, reject) => {
+    var subredditUrl = `https://www.reddit.com/r/${subreddit}`;
+    console.log(`Processing /r/${subreddit}`);
+    _getPosts(subredditUrl, (err, results) => {
       if (err) {
-        console.error(err);
+        console.log(err);
+        reject(err);
       } else {
-        let filePath = `data/${subreddit}.json`;
-        const json = comments.map(JSON.stringify).join('\n');
-        fs.writeFile(filePath, json, (err) => {
-          if (err) return console.log(err);
-          console.log(`${comments.length} comments written to ${filePath}.`);
+        console.log(`Loading comments from ${results.length} posts ...`);
+        _getComments(subredditUrl, results, (err, comments) => {
+          if (err) {
+            console.error(err);
+            reject(err);
+          } else {
+            let filePath = `data/${subreddit}.json`;
+            const json = comments.map(JSON.stringify).join('\n');
+            fs.writeFile(filePath, json, (err) => {
+              if (err) {
+                console.log(err);
+                reject(err);
+              }
+              console.log(`${comments.length} comments written to ${filePath}.`);
+              resolve(filePath);
+            });
+          }
         });
-      } 
+      }
     });
-  }
-});
+  });
+}
+
+
+var api = {
+  getComments: getComments
+}
+
+module.exports = api;
+
