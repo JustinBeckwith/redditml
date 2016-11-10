@@ -1,26 +1,25 @@
 const readline = require('readline');
 const fs = require('fs');
 const async = require('async');
-const Language = require('@google-cloud/language');
-const BigQuery = require('@google-cloud/bigquery');
+const nconf = require('nconf');
+const Translate = require('@google-cloud/translate');
 
-const project = { 
+nconf.argv().env().file({
+  file: 'translate_key.json'
+});
+
+const translate = Translate({ 
   projectId: 'redditml',
-  keyFilename: 'keys.json'
-};
+  key: nconf.get('translate_api_key')
+});
 
-const language = Language(project);
+let readDir = process.argv[2]; //'./data';
+let writeDir = process.argv[3]; //'./data/sentiment';
 
-const bigquery = BigQuery(project);
-const dataset = bigquery.dataset('redditml');
-const pTable = dataset.table('pcomments');
+analyzeAll();
 
-function analyzeAll() {
-  let readDir = './data';
-  let writeDir = './data/sentiment';
-  
+function analyzeAll() {  
   let q = [];
-
   fs.readdir(readDir, (err, files) => {
     files.filter((file) => {
       return fs.statSync(`${readDir}/${file}`).isFile();
@@ -45,24 +44,22 @@ function analyzeAll() {
   // create a thread pump that processes a maximum of 10 requests a second
   let pump = setInterval(() => {
     let cnt = 0;
-    while (q.length > 0 && cnt < 10) {
+    while (q.length > 0 && cnt < 9) {
       let task = q.pop();
       cnt++;
       let comment = task.comment;
       console.log("In queue: " + q.length + "  Processing: " + cnt);
-      language.detectSentiment(comment.body, { verbose: true }, (err, sentiment) => {
+      translate.detect(comment.body, (err, result) => {
         if (err) {
           console.error(err);
         } else {
-          console.log("Sentiment: %j", sentiment);
-          comment.polarity = sentiment.polarity;
-          comment.magnitude = sentiment.magnitude;
-          task.writableStream.write(JSON.stringify(comment) + '\n');    
+          console.log("Language: %j", result.language);
+          comment.language = result.language;
+          comment.confidence = result.confidence;
+          task.writableStream.write(JSON.stringify(comment) + '\n');
           console.log('Comment processed.');
         }
       });
     }
   }, 1000);
 }
-
-analyzeAll();

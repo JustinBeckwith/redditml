@@ -1,0 +1,13 @@
+{
+  "subreddits": [
+    { "name": "malmo" },
+    { "name": "oslo" },
+    { "name": "aixmarseille" },
+    { "name": "buenosaires" },
+    { "name": "helsinki" },
+    { "name": "copenhagen" },
+    { "name": "shanghai" },
+    { "name": "singapore" },
+    { "name": "madrid" }
+  ]
+}

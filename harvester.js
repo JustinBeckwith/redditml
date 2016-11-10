@@ -3,10 +3,75 @@ const util = require('util');
 const async = require('async');
 const fs = require('fs');
 
+// usage: node harvester listOfSubreddits.json outputDirectory pagesToRead
+let subredditFilePath = process.argv[2];
+let outputPath = process.argv[3]
+let pagesToRead = (process.argv.length > 4) ? process.argv[4] : 4;
+
+let subreddits = require(subredditFilePath).subreddits;
+harvestAll();
+
+function harvestAll() {
+  
+  async.series(
+    subreddits.map((subreddit) => {
+      return (callback) => {
+        getComments(subreddit.name)
+          .then((filePath) => {
+            callback();
+          })
+          .catch((err) => {
+            callback(err);  
+          });
+      }
+    }),
+    (err, results) => {
+      if (err) {
+        console.error(err);
+        return;
+      } else {
+        console.log(results);
+      }
+    }
+  );
+}
+
+function getComments(subreddit) {
+  return new Promise((resolve, reject) => {
+    var subredditUrl = `https://www.reddit.com/r/${subreddit}`;
+    console.log(`Processing /r/${subreddit}`);
+    _getPosts(subredditUrl, (err, results) => {
+      if (err) {
+        console.log(err);
+        reject(err);
+      } else {
+        console.log(`Loading comments from ${results.length} posts ...`);
+        _getComments(subredditUrl, results, (err, comments) => {
+          if (err) {
+            console.error(err);
+            reject(err);
+          } else {
+            let filePath = `${outputPath}/${subreddit}.json`;
+            const json = comments.map(JSON.stringify).join('\n');
+            fs.writeFile(filePath, json, (err) => {
+              if (err) {
+                console.log(err);
+                reject(err);
+              }
+              console.log(`${comments.length} comments written to ${filePath}.`);
+              resolve(filePath);
+            });
+          }
+        });
+      }
+    });
+  });
+}
+
 function _getPosts(subredditUrl, callback) {
   console.log("Request data from reddit...");
   let allPosts = [];
-  let pagesToFetch = 4;
+  let pagesToFetch = pagesToRead;
   let fetchFns = Array(pagesToFetch);
   let fetchFn = (after, callback) => {
     console.log("Loading page: " + after);
@@ -117,43 +182,3 @@ function _populateComments(comments, items) {
     }
   }
 }
-
-function getComments(subreddit) {
-  return new Promise((resolve, reject) => {
-    var subredditUrl = `https://www.reddit.com/r/${subreddit}`;
-    console.log(`Processing /r/${subreddit}`);
-    _getPosts(subredditUrl, (err, results) => {
-      if (err) {
-        console.log(err);
-        reject(err);
-      } else {
-        console.log(`Loading comments from ${results.length} posts ...`);
-        _getComments(subredditUrl, results, (err, comments) => {
-          if (err) {
-            console.error(err);
-            reject(err);
-          } else {
-            let filePath = `data/${subreddit}.json`;
-            const json = comments.map(JSON.stringify).join('\n');
-            fs.writeFile(filePath, json, (err) => {
-              if (err) {
-                console.log(err);
-                reject(err);
-              }
-              console.log(`${comments.length} comments written to ${filePath}.`);
-              resolve(filePath);
-            });
-          }
-        });
-      }
-    });
-  });
-}
-
-
-var api = {
-  getComments: getComments
-}
-
-module.exports = api;
-
