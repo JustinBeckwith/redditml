@@ -10,11 +10,11 @@
   "author": "Justin Beckwith <justin.beckwith@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@google-cloud/bigquery": "^0.4.0",
-    "@google-cloud/language": "^0.5.0",
-    "@google-cloud/translate": "^0.4.0",
+    "@google-cloud/bigquery": "^1.0.0",
+    "@google-cloud/language": "^1.1.0",
+    "@google-cloud/translate": "^1.1.0",
     "async": "^2.1.2",
-    "nconf": "^0.8.4",
+    "nconf": "^0.10.0",
     "request": "^2.78.0"
   }
 }
